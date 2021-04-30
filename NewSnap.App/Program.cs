@@ -8,12 +8,6 @@ namespace NewSnap.App
     {
         private static void Main(string[] args)
         {
-            if (args.Length is not (2 or 3))
-            {
-                PrintUsage();
-                return;
-            }
-
             try
             {
                 Dump(args);
@@ -28,6 +22,20 @@ namespace NewSnap.App
 
         private static void Dump(string[] args)
         {
+            // Drag & Drop save file folder.
+            if (args.Length == 1 && Directory.Exists(args[0]))
+            {
+                Console.WriteLine("Extracting save data...");
+                SaveDumper.ExtractEntries(args[0], args[0]);
+                return;
+            }
+
+            if (args.Length is not (2 or 3))
+            {
+                PrintUsage();
+                return;
+            }
+
             var mode = args[0];
             var path = args[1];
             switch (mode)
@@ -77,6 +85,8 @@ namespace NewSnap.App
 See below for command line parameters.
 An optional destination path will resolve to the source file/folder's current folder if not provided.
 
+Drop a save file folder onto the exe to unpack the save file's contents in the same folder.
+
 ==============================
 -sav [folder] [destFolder(Optional)]
 -drp [drpFile] [destFolder(Optional)]
@@ -84,6 +94,9 @@ An optional destination path will resolve to the source file/folder's current fo
 ==============================
 Hint: [x] are string paths.
 ");
+
+            Console.WriteLine("Press any key to exit.");
+            Console.ReadKey();
         }
     }
 }

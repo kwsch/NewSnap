@@ -24,8 +24,9 @@ namespace NewSnap.Lib
             if (!File.Exists(file))
                 return;
 
-            var subDir = Path.Combine(destDir, $"{index:00}_out");
+            var subDir = Path.Combine(destDir, $"{index:00}");
             Directory.CreateDirectory(subDir);
+            Console.Write($"Extracting {subDir}...");
 
             var stream = File.OpenRead(file);
             using var sav = new SaveFile(stream, index);
@@ -34,6 +35,7 @@ namespace NewSnap.Lib
             // Sorting by filename is good, so pad with zeroes.
             var count = sav.EntryCount;
             var digits = (int) Math.Floor(Math.Log10(count) + 1);
+            Console.WriteLine($" found ~{count} files.");
 
             for (int i = 0; i < count; i++)
             {
