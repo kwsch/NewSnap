@@ -32,8 +32,8 @@ namespace NewSnap.App
             var path = args[1];
             switch (mode)
             {
-                case "-sav" when !File.Exists(path):
-                    Console.WriteLine("Input ROM directory not found.");
+                case "-sav" when !Directory.Exists(path):
+                    Console.WriteLine("Input save file directory not found.");
                     return;
 
                 case "-sav":
