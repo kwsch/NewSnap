@@ -5,6 +5,8 @@ namespace NewSnap.Lib
 {
     public class DrpFileEntry
     {
+        public readonly DrpFileHeader Header;
+
         /// <summary>
         /// Relative path File Name
         /// </summary>
@@ -14,18 +16,8 @@ namespace NewSnap.Lib
         /// <summary>
         /// Decrypted data for the file.
         /// </summary>
-        public readonly byte[] Data;
-
-        /// <summary>
-        /// Extension Magic (Crc32 encoded)
-        /// </summary>
-        /// <see cref="Crc32"/>
-        public readonly uint Extension;
-
-        /// <summary>
-        /// When true, is stored inside a <see cref="DrpArchive"/> as a <see cref="Oodle"/> compressed bin.
-        /// </summary>
-        public bool Compressed { get; set; }
+        /// <remarks>Mutable for purposes of repacking modified archives...</remarks>
+        private byte[] Data;
 
         /// <summary>
         /// Indicates if the file name stored within the <see cref="DrpArchive"/> should keep the extension part of the string.
@@ -33,11 +25,16 @@ namespace NewSnap.Lib
         /// <remarks>Some files exclude the extension chars, while others retain it.</remarks>
         public bool HasExtensionFileName => FileName.Contains('.');
 
-        public DrpFileEntry(string fileName, byte[] data, uint extension)
+        /// <summary>
+        /// Indicates if the file is compressed when stored in a <see cref="DrpArchive"/>.
+        /// </summary>
+        public bool Compressed { get; set; }
+
+        public DrpFileEntry(string fileName, byte[] data, DrpFileHeader header)
         {
-            Data = data;
+            Header = header;
             FileName = fileName;
-            Extension = extension;
+            Data = data;
         }
 
         /// <summary>
@@ -55,7 +52,7 @@ namespace NewSnap.Lib
 
         private string GetExtensionString()
         {
-            var magic = Extension;
+            var magic = Header.Extension;
             if (DrpFileExtensions.TryGetValue(magic, out var extension))
                 return $".{extension}";
 
@@ -63,6 +60,11 @@ namespace NewSnap.Lib
             Debug.WriteLine($"Unknown Extension CRC32: 0x{result}");
             return $".{result}";
         }
+
+        public byte[] GetData() => Data;
+        public void SetData(byte[] data) => Data = data;
+
+        public override string ToString() => GetFullFileName();
 
         /// <summary>
         /// <see cref="Crc32"/> magic values used to store extension types.

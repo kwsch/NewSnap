@@ -1,4 +1,5 @@
-﻿using System.Diagnostics;
+﻿using System;
+using System.Diagnostics;
 
 namespace NewSnap.Lib
 {
@@ -111,13 +112,15 @@ namespace NewSnap.Lib
 
     public static class XorShiftUtil
     {
-        public static void DecryptWord(this XorShift rng, byte[] archive, int offset)
+        public static void DecryptWord(this XorShift rng, Span<byte> archive)
         {
             uint rand = rng.GetNext(0xFFFFFFFF);
-            archive[offset + 0] ^= (byte)(rand >> 00);
-            archive[offset + 1] ^= (byte)(rand >> 08);
-            archive[offset + 2] ^= (byte)(rand >> 16);
-            archive[offset + 3] ^= (byte)(rand >> 24);
+            archive[0] ^= (byte)(rand >> 00);
+            archive[1] ^= (byte)(rand >> 08);
+            archive[2] ^= (byte)(rand >> 16);
+            archive[3] ^= (byte)(rand >> 24);
         }
+
+        public static void DecryptWord(this XorShift rng, Span<uint> archive, int index) => archive[index] ^= rng.GetNext(0xFFFFFFFF);
     }
 }
