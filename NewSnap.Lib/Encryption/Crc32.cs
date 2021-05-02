@@ -40,15 +40,12 @@ namespace NewSnap.Lib
              0xb3667a2e, 0xc4614ab8, 0x5d681b02, 0x2a6f2b94, 0xb40bbe37, 0xc30c8ea1, 0x5a05df1b, 0x2d02ef8d
         };
 
-        public static uint ComputeChecksum(ReadOnlySpan<byte> arr, int offset, int count)
+        public static uint ComputeChecksum(ReadOnlySpan<byte> arr, uint init = 0)
         {
+            var checksum = ~init;
             var table = CrcTable;
-            var checksum = ~0u;
-            for (var i = 0; i < count; ++i)
-            {
-                checksum = (checksum >> 8) ^ table[(checksum & 0xFF) ^ arr[offset + i]];
-            }
-
+            foreach (var b in arr)
+                checksum = (checksum >> 8) ^ table[(checksum & 0xFF) ^ b];
             return ~checksum;
         }
 
@@ -64,7 +61,6 @@ namespace NewSnap.Lib
             return ~checksum;
         }
 
-        public static uint ComputeChecksum(ReadOnlySpan<byte> arr) => ComputeChecksum(arr, 0, arr.Length);
         public static uint ComputeChecksum(string arr) => ComputeChecksum(arr, 0, arr.Length);
     }
 }

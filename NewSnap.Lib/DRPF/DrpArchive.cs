@@ -7,17 +7,13 @@ namespace NewSnap.Lib
     public class DrpArchive
     {
         /// <summary> Crc32(DRPF) </summary>
-        private const uint ArchiveHeaderMagic = 0x7F0E5359;
+        public const uint ArchiveHeaderMagic = 0x7F0E5359;
         /// <summary> Crc32(fhdr) </summary>
-        private const uint CryptoBlockMagic = 0xC65753E8;
-        /// <summary> Crc32(resd) </summary>
-        private const uint FileBlockMagic = 0xE0A331B4;
-        /// <summary> Crc32(Oodl) </summary>
-        private const uint CompressedDataMagic = 0xE42D98BA;
+        public const uint CryptoBlockMagic = 0xC65753E8;
 
         /* Structure:
          * u32 Magic (DRPF)
-         * u32 Checksum (CRC32 over data[0x10..0x94])
+         * u32 Checksum (CRC32 over data[0x10..0x94]), acts as encryption seed for Header and Footer sections.
          * u32 Content Handling (encrypted toggle)
          * u32 Header Size
          * u32 FileCount
@@ -32,13 +28,16 @@ namespace NewSnap.Lib
          * u32[] Footer
          */
 
-        private readonly DrpFileEntry[] _files;
-        private readonly byte[] _seedTable;
+        public readonly uint CryptoMagic;
+        public bool Encrypted => CryptoMagic != CryptoBlockMagic;
+        public readonly DrpFileEntry[] Files;
+        public readonly byte[] SeedTable;
+        public readonly byte[] Footer;
 
-        public int FileCount => _files.Length;
+        public int FileCount => Files.Length;
 
-        public string GetFileName(int i) => _files[i].GetFullFileName();
-        public byte[] GetFileData(int i) => _files[i].GetData();
+        public string GetFileName(int i) => Files[i].GetFullFileName();
+        public byte[] GetFileData(int i) => Files[i].GetData();
 
         /// <summary>
         /// Initializes the archive from the input data. The input reference will be decrypted if it is encrypted.
@@ -54,10 +53,11 @@ namespace NewSnap.Lib
                 throw new ArgumentException("Invalid archive magic");
 
             // Copy the encryption table.
-            _seedTable = archive.Slice(0x14, 0x80).ToArray();
+            SeedTable = archive.Slice(0x14, 0x80).ToArray();
 
             // Decrypt the archive.
-            if (BitConverter.ToUInt32(archive[0x08..]) != CryptoBlockMagic)
+            CryptoMagic = BitConverter.ToUInt32(archive[0x08..]);
+            if (Encrypted)
                 Decrypt(data.AsSpan());
 
             // Verify the header's checksum (CRC32 over file count and seed table).
@@ -67,10 +67,10 @@ namespace NewSnap.Lib
             // Get the file count.
             var fileCount = BitConverter.ToInt32(archive[0x10..]);
             archive = archive[0x94..];
-            _files = ReadFiles(fileCount, ref archive);
+            Files = ReadFiles(fileCount, ref archive);
 
             // Whatever is left in the archive span is the footer.
-            // Not that we have any use for it.
+            Footer = archive.ToArray();
         }
 
         private static DrpFileEntry[] ReadFiles(int fileCount, ref ReadOnlySpan<byte> archive)
@@ -106,7 +106,7 @@ namespace NewSnap.Lib
             for (int i = 0; i < fileCount; ++i)
             {
                 CryptChunk(fileData, i);
-                if (BitConverter.ToUInt32(fileData[4..]) != FileBlockMagic)
+                if (BitConverter.ToUInt32(fileData[4..]) != DrpFileHeader.FileBlockMagic)
                     throw new ArgumentException("Invalid File Block Magic?");
 
                 // Advance
@@ -143,55 +143,40 @@ namespace NewSnap.Lib
             }
         }
 
-        private void CryptChunk(Span<byte> archive, int index, bool cryptData = true)
+        private void CryptChunk(Span<byte> chunk, int index, bool cryptData = true)
         {
-            var seed = BitConverter.ToUInt32(archive);
+            var seed = BitConverter.ToUInt32(chunk);
             var rng = GetEncryptionRng(seed);
 
             // Decrypt the chunk header
-            rng.DecryptWord(archive[0x04..]);
-            rng.DecryptWord(archive[0x08..]);
+            rng.DecryptWord(chunk[0x04..]);
+            rng.DecryptWord(chunk[0x08..]);
 
             if (!cryptData)
                 return;
 
             // Decrypt the data
-            var chunkSize = BitConverter.ToUInt32(archive[0x08..]);
+            var chunkSize = BitConverter.ToUInt32(chunk[0x08..]);
             if ((chunkSize & 3) != 0)
                 throw new ArgumentException($"Invalid ChunkSize {chunkSize:X} at chunk index {index:X}");
 
             // Treat as u32 instead of u8, since we have the above assumption. Can go 4x as fast.
-            var asUint = MemoryMarshal.Cast<byte, uint>(archive);
+            var asUint = MemoryMarshal.Cast<byte, uint>(chunk);
             var count = chunkSize >> 2;
             for (int i = 3; i < count; i++)
                 rng.DecryptWord(asUint, i);
         }
 
-        private XorShift GetEncryptionRng(uint seed)
-        {
-            var xs = GetXorshiftSeed(seed);
-            return new XorShift(xs);
-        }
-
         /// <summary>
-        /// The <see cref="seed"/> is interpreted as u8 indexes in the <see cref="_seedTable"/> to build the actual <see cref="XorShift"/> seed.
+        /// The <see cref="seed"/> is interpreted as u8 indexes in the <see cref="SeedTable"/> to build the actual <see cref="XorShift"/> seed.
         /// </summary>
-        private uint GetXorshiftSeed(uint seed)
-        {
-            var key = 0u;
-            for (int i = 0; i < 4; ++i)
-            {
-                var index = (seed >> (i * 8)) & 0x7F;
-                key |= (uint)_seedTable[index] << (i * 8);
-            }
-            return key;
-        }
+        public XorShift GetEncryptionRng(uint seed) => XorShiftUtil.GetEncryptionRng(seed, SeedTable);
 
         private static DrpFileEntry GetFile(ReadOnlySpan<byte> file)
         {
             var header = new DrpFileHeader(file);
             // Check the block magic.
-            if (header.Magic != FileBlockMagic)
+            if (header.Magic != DrpFileHeader.FileBlockMagic)
                 throw new ArgumentException("Invalid File Block Magic?");
 
             // Get the file name length.
@@ -211,7 +196,7 @@ namespace NewSnap.Lib
                 throw new ArgumentException($"Invalid chunk extents {compressedFileOffset:X} + {compressedSize:X} > {chunkSize:X}");
 
             var compression = BitConverter.ToUInt32(file[compressedFileOffset..]);
-            if (compression == CompressedDataMagic)
+            if (compression == DrpFileHeader.CompressedDataMagic)
             {
                 // File is compressed. Skip the u32 Oodl header.
                 var compressedData = file.Slice(compressedFileOffset + 4, compressedSize - 4);

@@ -26,6 +26,11 @@ namespace NewSnap.Lib
         public bool HasExtensionFileName => FileName.Contains('.');
 
         /// <summary>
+        /// Checksum of the data.
+        /// </summary>
+        public uint GetChecksum() => Crc32.ComputeChecksum(Data);
+
+        /// <summary>
         /// Indicates if the file is compressed when stored in a <see cref="DrpArchive"/>.
         /// </summary>
         public bool Compressed { get; set; }

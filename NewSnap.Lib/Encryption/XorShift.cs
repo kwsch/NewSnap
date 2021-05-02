@@ -121,6 +121,20 @@ namespace NewSnap.Lib
             archive[3] ^= (byte)(rand >> 24);
         }
 
-        public static void DecryptWord(this XorShift rng, Span<uint> archive, int index) => archive[index] ^= rng.GetNext(0xFFFFFFFF);
+        public static void DecryptWord(this XorShift rng, Span<uint> data, int index) => data[index] ^= rng.GetNext(0xFFFFFFFF);
+
+        public static uint GetXorshiftSeed(uint seed, ReadOnlySpan<byte> table)
+        {
+            var key = 0u;
+            for (int i = 0; i < 4; ++i)
+            {
+                var index = (int)((seed >> (i * 8)) & 0x7F);
+                key |= (uint)table[index] << (i * 8);
+            }
+
+            return key;
+        }
+
+        public static XorShift GetEncryptionRng(uint seed, ReadOnlySpan<byte> table) => new(GetXorshiftSeed(seed, table));
     }
 }

@@ -4,12 +4,18 @@ namespace NewSnap.Lib
 {
     public class DrpFileHeader
     {
+        /// <summary> Crc32 of decrypted data. </summary>
         public uint Seed;
         public uint Magic;
         public int SizeTotal;
         public uint Extension;
         public int CompressedSize;
         public int DecompressedSize;
+
+        /// <summary> Crc32(resd) </summary>
+        public const uint FileBlockMagic = 0xE0A331B4;
+        /// <summary> Crc32(Oodl) </summary>
+        public const uint CompressedDataMagic = 0xE42D98BA;
 
         public DrpFileHeader(ReadOnlySpan<byte> decHeader)
         {
