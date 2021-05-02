@@ -73,8 +73,10 @@ namespace NewSnap.Lib
             h.CompressedSize = h.DecompressedSize = payload.Length;
             if (entry.Compressed)
             {
-                payload = Oodle.Compress(payload);
-                h.CompressedSize = 4 + payload.Length;
+                payload = Oodle.Compress(payload, out int size);
+                h.CompressedSize = 4 + size;
+
+                Debug.Assert((payload.Length & 3) == 0);
             }
 
             var nameSize = (entry.FileName.Length | 3) + 1; // next multiple of 4
@@ -153,12 +155,6 @@ namespace NewSnap.Lib
                 for (int i = remain; i < 4; i++)
                     bw.Write((byte)0);
             }
-        }
-
-        private static int GetSize4(int size)
-        {
-            var r = (size & 3);
-            return size + (r == 0 ? 4 : (4 - r));
         }
 
         public static uint GetHeaderSeed(DrpArchive archive)

@@ -12,7 +12,7 @@ namespace NewSnap.Tests
         const string path = @"E:\archive.drp";
 
         [Fact]
-        public void TryCalcChecksum()
+        public void VerifyChecksumsAndRebuild()
         {
             var original = File.ReadAllBytes(path);
             var data = (byte[]) original.Clone();
@@ -31,7 +31,6 @@ namespace NewSnap.Tests
             using var ms = new MemoryStream(original.Length);
             drp.Write(ms);
             var result = ms.ToArray();
-            File.WriteAllBytes(@"E:\created.drp", result);
             result.Length.Should().Be(original.Length);
             result.SequenceEqual(original).Should().BeTrue();
         }

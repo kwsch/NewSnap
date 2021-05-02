@@ -59,20 +59,28 @@ namespace NewSnap.Lib
         /// Compresses a span of bytes to Oodle Compressed bytes (Requires Oodle DLL)
         /// </summary>
         /// <param name="input">Input Decompressed Data</param>
+        /// <param name="compressedSize">Actual Compressed Data size</param>
         /// <param name="format">Compression format to use</param>
         /// <param name="level">Compression setting to use</param>
-        /// <returns>Untrimmed working span of compressed data.</returns>
-        public static Span<byte> Compress(ReadOnlySpan<byte> input, OodleFormat format = OodleFormat.Kraken, OodleCompressionLevel level = OodleCompressionLevel.Optimal2)
+        /// <returns>Span of compressed data with remainder aligned working bytes.</returns>
+        public static Span<byte> Compress(ReadOnlySpan<byte> input, out int compressedSize,
+            OodleFormat format = OodleFormat.Kraken, OodleCompressionLevel level = OodleCompressionLevel.Optimal2)
         {
             var maxSize = GetCompressedBufferSizeNeeded(input.Length);
             var result = new byte[maxSize].AsSpan();
-            return Compress(input, result, format, level);
+            return Compress(input, result, out compressedSize, format, level);
         }
 
-        private static Span<byte> Compress(ReadOnlySpan<byte> input, Span<byte> result, OodleFormat format, OodleCompressionLevel level)
+        private static Span<byte> Compress(ReadOnlySpan<byte> input, Span<byte> result, out int compressedSize, OodleFormat format, OodleCompressionLevel level)
         {
             var encodedSize = OodleLZ_Compress(format, ref MemoryMarshal.GetReference(input), input.Length, ref MemoryMarshal.GetReference(result), level);
-            return result[..(int)encodedSize];
+
+            // Oodle's compressed result leaves data after the "compressed length" return index.
+            // Return an aligned span (ensuring length is a multiple of 4).
+            // Retaining these unused bytes matches the behavior observed in New Pokémon Snap DRPF files.
+            compressedSize = (int)encodedSize;
+            var align = (compressedSize + 3) & ~3;
+            return result[..align];
         }
 
         /// <summary>
