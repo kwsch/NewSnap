@@ -132,5 +132,21 @@ namespace NewSnap.Lib
                 iv[i] = (byte)(entry[i] ^ (rng.GetNext(0xFE) + 1));
             return iv;
         }
+
+        public static int GetIndex(string fileName)
+        {
+            const ulong lo = 0x2163A6B38429BC22UL;
+            const ulong hi = 0x9B4923E9F5AAB470UL;
+            var rng = new XorShift(lo, hi);
+            for (int i = 0; i < 100; i++)
+            {
+                var first = rng.GetNext(uint.MaxValue);
+                var second = rng.GetNext(uint.MaxValue);
+                var fn = $"{first:x8}{second:x8}";
+                if (fileName == fn)
+                    return i;
+            }
+            return -1;
+        }
     }
 }

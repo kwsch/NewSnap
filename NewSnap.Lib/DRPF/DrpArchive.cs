@@ -38,6 +38,7 @@ namespace NewSnap.Lib
 
         public string GetFileName(int i) => Files[i].GetFullFileName();
         public byte[] GetFileData(int i) => Files[i].GetData();
+        public DrpFileEntry? GetFileEntry(string fileName) => Array.Find(Files, z => z.GetFullFileName() == fileName);
 
         /// <summary>
         /// Initializes the archive from the input data. The input reference will be decrypted if it is encrypted.

@@ -11,16 +11,11 @@ namespace NewSnap.Tests
         [Fact]
         public void DumpSaveNames()
         {
-            const ulong lo = 0x2163A6B38429BC22UL;
-            const ulong hi = 0x9B4923E9F5AAB470UL;
-            var rng = new XorShift(lo, hi);
-            for (int i = 0; i < 15; i++)
+            var arr = SaveReader.SaveFileNames;
+            for (int i = 0; i < arr.Count; i++)
             {
-                var first = rng.GetNext(uint.MaxValue);
-                var second = rng.GetNext(uint.MaxValue);
-                var fn = $"{first:x8}{second:x8}";
-                var expect = SaveReader.SaveFileNames[i];
-                fn.Should().Be(expect);
+                var index = SaveReader.GetIndex(arr[i]);
+                index.Should().Be(i);
             }
         }
 

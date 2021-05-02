@@ -23,14 +23,27 @@ namespace NewSnap.App
         private static void Dump(string[] args)
         {
             // Drag & Drop save file folder.
-            if (args.Length == 1 && Directory.Exists(args[0]))
+            if (args.Length == 1)
             {
-                Console.WriteLine("Extracting save data...");
-                SaveDumper.ExtractEntries(args[0], args[0]);
-                return;
+                var first = args[0];
+                if (Directory.Exists(first))
+                {
+                    Console.WriteLine("Extracting save data...");
+                    SaveDumper.ExtractEntries(first, first);
+                    Console.WriteLine("Done!");
+                    return;
+                }
+
+                if (File.Exists(first))
+                {
+                    Console.WriteLine("Extracting save data...");
+                    SaveDumper.ExtractFile(first);
+                    Console.WriteLine("Done!");
+                    return;
+                }
             }
 
-            if (args.Length is not (2 or 3))
+            if (args.Length is not (2 or 3 or 4))
             {
                 PrintUsage();
                 return;
@@ -40,6 +53,21 @@ namespace NewSnap.App
             var path = args[1];
             switch (mode)
             {
+                case "-sav" when File.Exists(path):
+                {
+                    var index = SaveReader.GetIndex(Path.GetFileNameWithoutExtension(path));
+
+                    string GetDestination()
+                    {
+                        var p = args.Length > 2 ? args[2] : Directory.GetParent(Path.GetFullPath(path)).FullName;
+                        return Path.Combine(p, $"{index:00}");
+                    }
+
+                    var dest = GetDestination();
+                    SaveDumper.ExtractFiles(path, dest, index);
+                    break;
+                }
+
                 case "-sav" when !Directory.Exists(path):
                     Console.WriteLine("Input save file directory not found.");
                     return;
@@ -69,6 +97,24 @@ namespace NewSnap.App
                     break;
                 }
 
+                case "-ms" or "-mf" when !File.Exists(path):
+                    Console.WriteLine("Input drp file not found.");
+                    return;
+
+                case "-ms" when args.Length > 2 && File.Exists(args[2]): // src, inj
+                    DrpArchiveChanger.Replace(path, path, args[2..]);
+                    break;
+                case "-ms" when args.Length > 3 && File.Exists(args[3]): // src, dest, inj
+                    DrpArchiveChanger.Replace(path, path, args[2..]);
+                    break;
+
+                case "-mf" when args.Length > 2 && Directory.Exists(args[2]): // src, inj
+                    DrpArchiveChanger.Replace(path, path, args[2]);
+                    break;
+                case "-mf" when args.Length > 3 && Directory.Exists(args[3]): // src, dest, inj
+                    DrpArchiveChanger.Replace(path, args[2], args[3]);
+                    break;
+
                 default:
                     PrintUsage();
                     return;
@@ -88,9 +134,21 @@ An optional destination path will resolve to the source file/folder's current fo
 Drop a save file folder onto the exe to unpack the save file's contents in the same folder.
 
 ==============================
--sav [folder] [destFolder(Optional)]
--drp [drpFile] [destFolder(Optional)]
--drp [drpFolder] [destFolder(Optional)]
+Extract Save File:
+  -sav [folder] [destFolder(Optional)]
+  -sav [file] [destFolder(Optional)]
+
+Extract Single DRPF Archive:
+  -drp [drpFile] [destFolder(Optional)]
+
+Extract Multiple DRPF Archives in Folder:
+  -drp [drpFolder] [destFolder(Optional)]
+
+Modify a DRPF with specific files:
+  -ms [drpFile] [destPath(Optional)] [file1] [file2(Optional)] [file3(Optional)] [etc...]
+
+Modify a DRPF with files in Folder:
+  -mf [drpFile] [destPath(Optional)] [fileFolder]
 ==============================
 Hint: [x] are string paths.
 ");

@@ -5,6 +5,14 @@ namespace NewSnap.Lib
 {
     public static class SaveDumper
     {
+        public static void ExtractFile(string file)
+        {
+            var index = SaveReader.GetIndex(Path.GetFileNameWithoutExtension(file));
+            var p = Directory.GetParent(Path.GetFullPath(file)).FullName;
+            var dest = Path.Combine(p, $"{index:00}");
+            ExtractFiles(file, dest, index);
+        }
+
         public static void ExtractEntries(string srcDir, string destDir)
         {
             var files = SaveReader.SaveFileNames;
@@ -16,10 +24,10 @@ namespace NewSnap.Lib
         {
             var files = SaveReader.SaveFileNames;
             var file = Path.Combine(srcDir, files[index]);
-            ExtractEntries(file, index, destDir);
+            ExtractFiles(file, destDir, index);
         }
 
-        private static void ExtractEntries(string file, int index, string destDir)
+        public static void ExtractFiles(string file, string destDir, int index)
         {
             if (!File.Exists(file))
                 return;
