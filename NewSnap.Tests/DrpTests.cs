@@ -9,7 +9,7 @@ namespace NewSnap.Tests
 {
     public class DrpTests
     {
-        const string path = @"E:\archive.drp";
+        private const string path = @"E:\archive.drp";
 
         [Fact]
         public void VerifyChecksumsAndRebuild()

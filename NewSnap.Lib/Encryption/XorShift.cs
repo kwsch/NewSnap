@@ -6,7 +6,8 @@ namespace NewSnap.Lib
     /// <summary>
     /// 128bit XorShift RNG, seeded from a 32bit value expanded into 128bits.
     /// </summary>
-    public class XorShift
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "CA1815:Override equals and operator equals on value types", Justification = "Unused")]
+    public ref struct XorShift
     {
         private const uint Mult = 0x41C64E6D;
         private const uint Add = 12345;
@@ -112,7 +113,7 @@ namespace NewSnap.Lib
 
     public static class XorShiftUtil
     {
-        public static void DecryptWord(this XorShift rng, Span<byte> archive)
+        public static void DecryptWord(this ref XorShift rng, Span<byte> archive)
         {
             uint rand = rng.GetNext(0xFFFFFFFF);
             archive[0] ^= (byte)(rand >> 00);
@@ -121,7 +122,7 @@ namespace NewSnap.Lib
             archive[3] ^= (byte)(rand >> 24);
         }
 
-        public static void DecryptWord(this XorShift rng, Span<uint> data, int index) => data[index] ^= rng.GetNext(0xFFFFFFFF);
+        public static void DecryptWord(this ref XorShift rng, Span<uint> data, int index) => data[index] ^= rng.GetNext(0xFFFFFFFF);
 
         public static uint GetXorshiftSeed(uint seed, ReadOnlySpan<byte> table)
         {
@@ -135,6 +136,9 @@ namespace NewSnap.Lib
             return key;
         }
 
+        /// <summary>
+        /// The <see cref="seed"/> is interpreted as u8 indexes in the <see cref="table"/> to build the actual <see cref="XorShift"/> seed.
+        /// </summary>
         public static XorShift GetEncryptionRng(uint seed, ReadOnlySpan<byte> table) => new(GetXorshiftSeed(seed, table));
     }
 }

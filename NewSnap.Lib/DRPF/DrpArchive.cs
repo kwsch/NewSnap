@@ -122,7 +122,7 @@ namespace NewSnap.Lib
         private void CryptHeader(Span<byte> archive, uint seed)
         {
             // Get the RNG
-            var rng = GetEncryptionRng(seed);
+            var rng = XorShiftUtil.GetEncryptionRng(seed, SeedTable);
 
             // Decrypt the header
             rng.DecryptWord(archive[0x08..]);
@@ -134,7 +134,7 @@ namespace NewSnap.Lib
 
         private void CryptFooter(Span<byte> footer, uint seed)
         {
-            var rng = GetEncryptionRng(seed);
+            var rng = XorShiftUtil.GetEncryptionRng(seed, SeedTable);
 
             // Decrypt to end.
             while (footer.Length != 0)
@@ -147,7 +147,7 @@ namespace NewSnap.Lib
         private void CryptChunk(Span<byte> chunk, int index, bool cryptData = true)
         {
             var seed = BitConverter.ToUInt32(chunk);
-            var rng = GetEncryptionRng(seed);
+            var rng = XorShiftUtil.GetEncryptionRng(seed, SeedTable);
 
             // Decrypt the chunk header
             rng.DecryptWord(chunk[0x04..]);
@@ -167,11 +167,6 @@ namespace NewSnap.Lib
             for (int i = 3; i < count; i++)
                 rng.DecryptWord(asUint, i);
         }
-
-        /// <summary>
-        /// The <see cref="seed"/> is interpreted as u8 indexes in the <see cref="SeedTable"/> to build the actual <see cref="XorShift"/> seed.
-        /// </summary>
-        public XorShift GetEncryptionRng(uint seed) => XorShiftUtil.GetEncryptionRng(seed, SeedTable);
 
         private static DrpFileEntry GetFile(ReadOnlySpan<byte> file)
         {
