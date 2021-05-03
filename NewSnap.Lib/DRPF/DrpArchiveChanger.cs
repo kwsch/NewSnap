@@ -20,7 +20,7 @@ namespace NewSnap.Lib
         public static void Replace(string source, string destination, IEnumerable<string> filesToReplace)
         {
             var drp = Replace(source, filesToReplace);
-            using var fs = File.OpenWrite(destination);
+            using var fs = File.Open(destination, FileMode.Create, FileAccess.Write);
             drp.Write(fs);
         }
 
