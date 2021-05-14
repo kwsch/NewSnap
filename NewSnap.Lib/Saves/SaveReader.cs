@@ -86,21 +86,19 @@ namespace NewSnap.Lib
 
         public static byte[] DecryptHeader(ReadOnlySpan<byte> header, uint seed, byte[] key)
         {
-            var rng = new XorShift(seed);
             var dat = header[..0x20];
             var encIV = header[0x20..0x30];
 
-            var iv = ReadDecryptedIV(encIV, rng);
+            var iv = ReadDecryptedIV(encIV, seed);
             return Decrypt(key, iv, dat);
         }
 
         private static byte[] DecryptEntry(ReadOnlySpan<byte> entry, uint seed, byte[] key)
         {
-            var rng = new XorShift(seed);
             var encIV = entry[..0x10];
             var dat = entry[0x10..];
 
-            var iv = ReadDecryptedIV(encIV, rng);
+            var iv = ReadDecryptedIV(encIV, seed);
             return Decrypt(key, iv, dat);
         }
 
@@ -125,8 +123,9 @@ namespace NewSnap.Lib
             return decrypted;
         }
 
-        private static byte[] ReadDecryptedIV(ReadOnlySpan<byte> entry, XorShift rng)
+        private static byte[] ReadDecryptedIV(ReadOnlySpan<byte> entry, uint seed)
         {
+            var rng = new XorShift(seed);
             var iv = new byte[0x10];
             for (var i = 0x0; i < iv.Length; ++i)
                 iv[i] = (byte)(entry[i] ^ (rng.GetNext(0xFE) + 1));
