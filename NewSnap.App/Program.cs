@@ -92,7 +92,7 @@ namespace NewSnap.App
 
                 case "-drp":
                 {
-                    var dest = args.Length == 3 ? args[2] : Path.GetFullPath(path);
+                    var dest = args.Length == 3 ? args[2] : Directory.GetParent(path).FullName;
                     DumpUtil.DumpToPath(path, dest);
                     break;
                 }
